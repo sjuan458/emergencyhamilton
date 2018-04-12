@@ -1,0 +1,418 @@
+<head>
+  <title>Emergency Hamilton</title>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBrItUKFJyBj8t1rYqH0-Ni3f3tVschlGo&libraries=places"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gmaps.js/0.4.25/gmaps.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+  <script src="../assets/fire_stations.js"></script>
+  <script src="../assets/police_stations.js"></script>
+  <script src="../assets/hospitals.js"></script>
+  
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <meta charset="utf-8">
+
+
+  <style type="text/css">
+  	* {
+  		box-sizing: border-box;
+
+  	}
+
+  	body{
+  		background-color: #333333;
+
+  	}
+
+  	h2{
+  		text-align: center;
+  		float: left;
+  		margin: 0.45em 0.25em 0.25em 0.25em;
+  		padding: 0;
+  		width: 50%;
+  	}
+
+  	#author{
+  		position: absolute;
+  		bottom: 0;
+  		left: 5px;
+  		float: left;
+  		text-align: left;
+  		margin-left: 2%
+  		background-color: white;
+  	}
+
+  	#contact {
+  		position: absolute;
+  		bottom: 0;
+  		right: 5px;
+  		text-align: right;
+  		margin-left: 2%
+  		color: white;
+  	}
+
+  	#map{
+  		float: left;
+	  	height: 90%;
+	  	width: 75%;
+	  	margin-left: 2%
+	}
+
+	#mapSearch{
+		width: 300px;
+	}
+
+	#contentP {
+		padding: auto;
+		margin: auto;
+	}
+
+	#infoContent {
+		position: relative;
+		width: 20%;
+		height: 88%;
+		margin-right: 2%;
+		float: right;
+		background-color: #e9e9e9;
+	}
+
+	.topnav {
+	  overflow: hidden;
+	  padding: 0;
+	  background-color: #e9e9e9;
+	  margin: 5px 5px 5px 0;
+	}
+
+	.topnav a {
+	  float: left;
+	  display: block;
+	  color: black;
+	  text-align: center;
+	  padding: 14px 16px;
+	  text-decoration: none;
+	  font-size: 17px;
+	}
+
+	.topnav a:hover {
+	  cursor: pointer;
+	  background-color: #ddd;
+	  color: black;
+	}
+
+	.topnav a.active {
+	  background-color: #2196F3;
+	  color: white;
+	}
+
+	.topnav .search-container {
+	  float: right;
+	}
+
+	.topnav input[type=text] {
+	  padding: 6px;
+	  margin-top: 8px;
+	  font-size: 17px;
+	  border: none;
+	}
+
+	.topnav .search-container button {
+	  float: right;
+	  padding: 6px 10px;
+	  margin-top: 8px;
+	  margin-right: 16px;
+	  background: #ddd;
+	  font-size: 17px;
+	  border: none;
+	  cursor: pointer;
+	}
+
+	.topnav .search-container button:hover {
+	  background: #ccc;
+	}
+
+	@media screen and (max-width: 600px) {
+	  	.topnav .search-container {
+	    	float: none;
+	  	}
+		
+		.topnav a, .topnav input[type=text], .topnav .search-container button {
+		    float: none;
+		    display: block;
+		    text-align: left;
+		    width: 100%;
+		    margin: 0;
+			padding: 14px;
+		}
+		
+		.topnav input[type=text] {
+			border: 1px solid #ccc;
+		}
+		
+		.row #map{
+			width: 100%;
+			float: none;
+		    display: block;
+		}
+
+		#infoContent {
+			width: 100%;
+			min-height: 200px;
+			height: auto;
+			float: none;
+		    display: block;
+
+		}
+	}
+}
+  </style>
+</head>
+
+<body>
+  <div id="container">
+
+  	<div class="topnav">
+  		<a class="active" id="all">All</a>
+  		<a id="police">Police</a>
+  		<a id="fire">Firefighters</a>
+  		<a id="hospitals">Hospitals</a>
+  		<h2>Emergency Hamilton</h2>
+  		<div class="search-container">
+	  		<input id="mapSearch" type="text" placeholder="Search...">
+	  		<button type="submit"><i class="fa fa-search"></i></button>
+	  	</div>
+  	</div>
+  	<div class="row">
+	    <div id="map"></div>
+		<p id="locationError"></p>
+		<div class="well" id="infoContent">
+			<span id="about">
+				<p id="author">Juan Salazar</p>
+				<p id="contact"><a href="mailto:juan.salazar1@mohawkcollege.ca">Email</a></p>
+			</span>
+		</div>
+	</div>
+  </div>
+  <script type="text/javascript">
+  	$(document).ready(function(){
+		var markers = [];
+
+		getLocation();
+
+	  	function getLocation(){
+			if(navigator.geolocation){
+				navigator.geolocation.getCurrentPosition(main);
+			}else{
+				$("#locationError").text("Location is not supported");
+			}
+		}
+		
+		
+		
+		function main(position){
+			var latitude = position.coords.latitude;
+			var longitude = position.coords.longitude;
+			
+			var map = new google.maps.Map(document.getElementById("map"), { 
+				center: { 
+					lat: latitude, 
+					lng: longitude 
+				}, 
+				zoom: 12 
+			});
+
+			makeMarker("","","",0);
+
+			showAll();
+
+			var searchBox = new google.maps.places.SearchBox(document.getElementById('mapSearch')); 
+
+			google.maps.event.addDomListener(searchBox, 'places_changed', function() { 
+				var places = searchBox.getPlaces(); 
+				var bounds = new google.maps.LatLngBounds(); 
+				var marker = new google.maps.Marker({
+					position: { 
+						lat: latitude, 
+						lng: longitude 
+					},
+					map: map,
+					draggable: false 
+				});
+				markers.push(marker);
+
+				var i, place; 
+				for (i = 0; place = places[i]; i++) { 
+					bounds.extend(place.geometry.location); 
+					marker.setPosition(place.geometry.location); 
+				}
+
+				map.fitBounds(bounds); 
+				map.setZoom(15);
+			});
+
+			$("#police").click(function(){
+				showPolice(true);
+				$("#all").removeClass();
+				$("#police").removeClass().addClass("active");
+				$("#hospitals").removeClass();
+				$("#fire").removeClass();
+			});
+
+			$("#hospitals").click(function(){
+				showHospitals(true);
+				$("#all").removeClass();
+				$("#police").removeClass();
+				$("#hospitals").removeClass().addClass("active");
+				$("#fire").removeClass();
+			});
+
+			$("#fire").click(function(){
+				showFire(true);
+				$("#all").removeClass();
+				$("#police").removeClass();
+				$("#hospitals").removeClass();
+				$("#fire").removeClass().addClass("active");
+			});
+
+			$("#all").click(function(){
+				showAll();
+				$("#all").removeClass().addClass("active");
+				$("#police").removeClass();
+				$("#hospitals").removeClass();
+				$("#fire").removeClass();
+			});
+
+			function showPolice(remove){
+				if(remove){
+					removeMarkers();
+				}
+				for(i in policeStations){
+					var address = policeStations[i].ADDRESS;
+					var name = policeStations[i].NAME;
+					latitude = policeStations[i].LATITUDE;
+					longitude = policeStations[i].LONGITUDE;
+					phone = policeStations[i].PHONE;
+
+
+					makeMarker(address, name, phone, 1);
+				}
+			}
+
+			function showFire(remove){
+				if(remove){
+					removeMarkers();
+				}
+				for(i in fireStations){
+					if(fireStations[i].COMMUNITY.localeCompare("Hamilton") == 0 ){
+						var address = fireStations[i].ADDRESS + ", " +fireStations[i].COMMUNITY+", Ontario";
+						var name = fireStations[i].NAME;
+						latitude = fireStations[i].LATITUDE;
+						longitude = fireStations[i].LONGITUDE;
+
+						makeMarker(address, name, "", 2)
+					}
+				}
+			}
+
+			function showHospitals(remove){
+				if(remove){
+					removeMarkers();
+				}
+				for(i in hospitalsInfo){
+					var address = hospitalsInfo[i].ADDRESS + ", Hamilton, Ontario";
+					var name = hospitalsInfo[i].NAME;
+					latitude = hospitalsInfo[i].LATITUDE;
+					longitude = hospitalsInfo[i].LONGITUDE;
+					phone = hospitalsInfo[i].PHONE;
+
+					makeMarker(address, name, phone, 3);
+				}
+			}
+
+			function showAll(){
+				showHospitals(true);
+				showFire(false);
+				showPolice(false);
+			}
+
+			function makeMarker(address, name, phone, colorNumber){
+				var color;
+				var contentString;
+				var lat = latitude;
+				var lng = longitude;
+
+				switch(colorNumber){
+					case 0:
+						color = 'http://maps.google.com/mapfiles/ms/micons/green-dot.png';
+						break;
+					case 1:
+						color = 'http://maps.google.com/mapfiles/ms/micons/blue-dot.png';
+						break;
+					case 2:
+						color = 'http://maps.google.com/mapfiles/ms/micons/yellow-dot.png';
+						phone = "911";
+						break;
+					case 3:
+						color = 'http://maps.google.com/mapfiles/ms/micons/orange-dot.png';
+					default:
+						break;
+				}
+
+				if(colorNumber !== 0){
+					contentString = 
+						`
+							<p class="info">${name}<br>${address}</p>
+						`;
+					
+				}else{
+					contentString = `<p>Your Location</p>`;
+				}
+
+				var infoWindow = new google.maps.InfoWindow({
+					content: contentString
+				});
+
+				var marker = new google.maps.Marker({
+					position: { 
+						lat: latitude, 
+						lng: longitude 
+					},
+					icon: color,
+					title: name,
+					map: map, 
+					draggable: false 
+				});
+				//map.setMap(marker);
+
+				if(colorNumber !== 0){
+
+					marker.addListener('click', function(){
+						infoWindow.open(map, marker);
+						$("#infoContent").not('#about').empty().append(
+							`<h1>${name}</h1>
+							 <p id="contentP">
+							 	Phone: ${phone}<br><br>
+							 	Address: <a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}">${address}</a><br><br>
+							 	<br><br>
+							 	Latitude: ${latitude}<br><br>
+							 	Longitude: ${longitude}<br>
+							 </p>
+							`
+							);
+					});
+					markers.push(marker);	
+				}
+			}
+
+			function removeMarkers(){
+				for(var i = 0; marker = markers[i]; i++){
+					marker.setMap(null);
+				}
+
+				markers.length = 0;
+			}
+		}		
+	});	
+  	</script>
+	</body>
+</html>
